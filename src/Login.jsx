@@ -19,8 +19,8 @@ export default function Login() {
   return (
     <div className="center-screen">
       <form className="card narrow" onSubmit={submit}>
-        <h1>Healthy &amp; Tasty</h1>
-        <p className="muted">إدارة العروض — تسجيل الدخول</p>
+        <h1>إدارة صفحات الهبوط</h1>
+        <p className="muted">Healthy &amp; Tasty · تسجيل الدخول</p>
         <label className="field">
           <span>الإيميل</span>
           <input type="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
