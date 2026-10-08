@@ -100,6 +100,8 @@ input:disabled { opacity: 0.6; }
   position: sticky; top: 0; z-index: 5;
 }
 .topbar-end { display: flex; align-items: center; gap: 12px; }
+.dashboard-brand { display: grid; gap: 2px; }
+.topbar .dashboard-brand .muted { display: block; font-size: 0.75rem; }
 .content { max-width: 920px; margin: 0 auto; padding: 20px 16px 60px; }
 
 .banner { padding: 12px 14px; border-radius: 10px; margin-bottom: 16px; }
@@ -125,7 +127,7 @@ input:disabled { opacity: 0.6; }
   border-inline-start: 5px solid var(--accent, var(--primary));
   border-radius: var(--radius); padding: 14px;
 }
-.offer-card.inactive { opacity: 0.6; }
+.offer-card.inactive { border-inline-start-color: var(--muted); background: color-mix(in srgb, var(--surface) 75%, var(--bg)); }
 .thumb {
   width: 96px; height: 96px; border-radius: 10px; background: var(--bg);
   border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden;
@@ -167,4 +169,133 @@ input:disabled { opacity: 0.6; }
   .offer-card { grid-template-columns: 76px 1fr; }
   .thumb { width: 76px; height: 76px; }
   .topbar .muted { display: none; }
+}
+
+.flavor-group { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 0; min-width: 0; }
+.flavor-group legend { font-weight: 700; padding: 0 6px; }
+.flavor-edit-row { padding: 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; }
+.flavor-hidden { background: var(--bg); }
+.flavor-item input { min-width: 0; }
+.flavor-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.flavor-tools label { display: flex; align-items: center; gap: 6px; }
+
+/* Offer editor: helper text must not stretch neighboring labels or inputs. */
+.offer-form { min-width: 0; max-width: 760px; max-height: calc(100dvh - 32px); overflow: hidden; }
+.offer-form .modal-head, .offer-form .modal-foot { flex-shrink: 0; padding: 16px 24px; }
+.offer-form .modal-body { min-height: 0; display: grid; gap: 24px; padding: 24px; }
+.offer-form-section, .offer-form .flavor-editor { display: grid; gap: 16px; min-width: 0; }
+.offer-form-section + .offer-form-section,
+.offer-form .flavor-editor,
+.offer-form .flavor-editor + .offer-form-section { border-top: 1px solid var(--line); padding-top: 24px; }
+.offer-form-section > h3, .offer-form-section > span, .offer-form .flavor-editor > span { font-size: 1rem; font-weight: 700; line-height: 1.5; }
+.offer-form .field { margin: 0; min-width: 0; align-content: start; }
+.offer-form .grid2, .offer-form .grid3 { align-items: start; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.offer-form .grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.offer-form .field > span { line-height: 22px; }
+.offer-form input:not([type='checkbox']):not([type='file']), .offer-form .readonly { height: 46px; min-height: 46px; }
+.offer-form .readonly { display: flex; align-items: center; }
+.offer-form input[type='color'] { width: 100%; padding: 5px; }
+.offer-form textarea { resize: vertical; min-height: 100px; }
+.offer-form .field > small { line-height: 1.6; }
+.offer-form .upload-row { align-items: center; }
+.offer-form .upload-controls { flex: 1; min-width: 0; display: grid; gap: 10px; }
+.offer-form .upload-controls p { margin: 0; }
+.offer-form .upload-controls .btn { justify-self: start; }
+.offer-form .small-btn { margin-top: 0; min-height: 36px; }
+.offer-form .flavor-item { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 10px; }
+.offer-form .flavor-item .thumb { width: 46px; height: 46px; }
+.offer-form .file-btn { min-height: 46px; justify-content: center; white-space: nowrap; }
+.offer-form .flavor-tools { margin-top: 12px; gap: 8px; }
+.offer-form .flavor-tools label { margin-inline-end: auto; min-height: 36px; }
+.offer-form .checks { margin: 0; gap: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.offer-form .checks label { padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.offer-form input[type='checkbox'] { margin: 0; width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--primary); }
+.offer-form .modal-foot .btn { min-width: 100px; min-height: 44px; }
+
+/* Dashboard browsing and editor navigation. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.file-btn { position: relative; cursor: pointer; }
+.file-btn:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+.file-btn.is-disabled { opacity: 0.55; cursor: wait; }
+.content { max-width: 1040px; padding-top: 28px; }
+.tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
+.tabs .tab { padding-inline: 10px; }
+.section-description { margin: 6px 0 0; }
+.section-head { align-items: flex-start; margin: 24px 0 20px; }
+.section-head > .btn { flex-shrink: 0; }
+.offer-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.offer-overview > div { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.offer-overview strong { font-size: 1.25rem; color: var(--primary); }
+.offer-overview span { color: var(--muted); font-size: 0.9rem; }
+.offer-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(170px, 230px); gap: 16px; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.offer-toolbar .field { margin: 0; min-width: 0; align-content: start; }
+.offer-toolbar input, .offer-toolbar select { height: 46px; }
+.results-summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; }
+.results-summary .small-btn { margin: 0; }
+.offer-list { position: relative; gap: 16px; }
+.offer-card { padding: 18px; }
+.offer-card .info { min-width: 0; }
+.offer-card h3 { overflow-wrap: anywhere; }
+.offer-card .prices { flex-wrap: wrap; }
+.offer-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; }
+.offer-meta > span { padding: 2px 7px; background: var(--bg); border-radius: 6px; overflow-wrap: anywhere; }
+.offer-shortcuts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.offer-shortcuts .btn { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 25%, var(--line)); background: var(--bg); }
+.order-controls { display: flex; gap: 8px; align-items: center; }
+.order-controls .icon-btn { width: 38px; height: 38px; }
+.inline-notice { color: var(--text); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border-inline-start: 3px solid var(--accent); border-radius: 6px; padding: 10px 12px; margin: 12px 0; font-size: 0.85rem; }
+.success-notice { color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--ok) 30%, var(--line)); border-radius: 10px; padding: 12px 16px; }
+.empty { margin-top: 16px; }
+.tabs .tab:disabled { cursor: wait; }
+.offer-form .modal-head { align-items: flex-start; }
+.offer-form .modal-head > div { min-width: 0; }
+.offer-form .modal-head p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.offer-form .modal-head .icon-btn { flex-shrink: 0; }
+.offer-form .form-nav { display: flex; gap: 8px; flex-shrink: 0; overflow-x: auto; padding: 12px 24px; border-bottom: 1px solid var(--line); }
+.form-nav button { flex-shrink: 0; font: inherit; font-size: 0.85rem; font-weight: 700; border: 1px solid var(--line); border-radius: 999px; color: var(--primary); background: var(--bg); padding: 7px 14px; cursor: pointer; }
+.form-nav button:hover { border-color: var(--primary); }
+.offer-form h3[tabindex] { scroll-margin-top: 8px; }
+.offer-form h3:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; border-radius: 4px; }
+.offer-form .flavor-editor > h3 { font-size: 1rem; }
+.flavor-count { display: inline-block; font-size: 0.75rem; font-weight: 500; color: var(--muted); margin-inline-start: 6px; }
+.offer-form .flavor-editor .file-btn { padding: 4px 10px; font-size: 0.85rem; }
+.offer-form .upload-controls .file-btn { justify-self: start; }
+.offer-form .file-btn .visually-hidden { min-height: 1px; height: 1px; width: 1px; }
+
+@media (max-width: 640px) {
+  .topbar { padding: 12px 16px; }
+  .topbar strong { font-size: 0.9rem; }
+  .topbar .btn { padding: 6px 10px; }
+  .section-head { flex-wrap: wrap; }
+  .section-head h2 { font-size: 1.35rem; }
+  .tabs { gap: 6px; }
+  .tabs .tab { padding: 10px 4px; font-size: 0.85rem; }
+  .offer-overview { gap: 8px; }
+  .offer-overview > div { padding: 10px 6px; gap: 4px; flex-wrap: wrap; justify-content: center; text-align: center; }
+  .offer-overview strong { font-size: 1.15rem; }
+  .offer-overview span { font-size: 0.75rem; }
+  .offer-toolbar { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+  .offer-card { padding: 12px; gap: 10px; }
+  .actions { gap: 8px; }
+  .actions .order-controls { order: 4; width: 100%; border-top: 1px solid var(--line); padding-top: 10px; }
+  .order-controls > span { margin-inline-end: auto; }
+  .actions > .btn { padding: 8px 10px; font-size: 0.9rem; }
+  .offer-shortcuts .btn { flex: 1; padding: 10px 6px; font-size: 0.85rem; }
+  .offer-form .form-nav { padding: 10px 16px; flex-wrap: wrap; gap: 6px; }
+  .offer-form .form-nav button { padding: 6px 10px; }
+}
+
+@media (max-width: 640px) {
+  .offer-form { max-height: calc(100dvh - 24px); }
+  .offer-form .modal-body { padding: 16px; gap: 20px; }
+  .offer-form .modal-head, .offer-form .modal-foot { padding: 14px 16px; }
+  .offer-form .grid2, .offer-form .grid3 { grid-template-columns: minmax(0, 1fr); }
+  .offer-form .upload-row { flex-direction: column; align-items: stretch; }
+  .offer-form .upload-controls { width: 100%; }
+  .offer-form .flavor-group { padding: 10px; }
+  .offer-form .flavor-edit-row { padding: 10px; }
+  .offer-form .flavor-item { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; }
+  .offer-form .flavor-item .thumb { width: 40px; height: 46px; }
+  .offer-form .checks { grid-template-columns: minmax(0, 1fr); }
+  .offer-form .modal-foot .btn { flex: 1; }
 }
