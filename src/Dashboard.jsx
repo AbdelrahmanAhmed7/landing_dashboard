@@ -2,6 +2,7 @@ import { flavorData } from './flavorCatalog'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase, SITES } from './supabase'
 import OfferForm from './OfferForm.jsx'
+import { useOfferListMotion } from './useOfferListMotion'
 
 const fmt = (n) => Number(n).toLocaleString('en-US')
 const siteLabels = { cola: 'الكولا', 'ice-cream': 'الآيس كريم', spread: 'السبريد' }
@@ -23,18 +24,27 @@ export default function Dashboard({ session }) {
     setEditing(offer)
   }
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    const { data, error: err } = await supabase
-      .from('offers')
-      .select('*')
-      .eq('site', site)
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true })
-    if (err) setError(err.message)
-    else setOffers(data)
-    setLoading(false)
+  const load = useCallback(async ({ background = false } = {}) => {
+    if (!background) {
+      setLoading(true)
+      setError('')
+    }
+    try {
+      const { data, error: err } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('site', site)
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
+      if (err) throw err
+      setOffers(data || [])
+      return true
+    } catch (err) {
+      setError(err.message || 'تعذّر تحميل العروض. حاول مرة تانية.')
+      return false
+    } finally {
+      if (!background) setLoading(false)
+    }
   }, [site])
 
   useEffect(() => { load() }, [load])
@@ -51,10 +61,13 @@ export default function Dashboard({ session }) {
     try {
       const { error: err } = await action()
       if (err) throw err
-      await load()
-      setNotice(message)
+      const refreshed = await load({ background: true })
+      if (refreshed) setNotice(message)
+      else setError('تم حفظ التغيير، لكن تعذّر تحديث القائمة. حدّث الصفحة للمراجعة.')
       return true
     } catch (err) {
+      // A reorder can partly succeed; reconcile without hiding the old cards.
+      await load({ background: true })
       setError(err.message)
       return false
     } finally {
@@ -91,6 +104,7 @@ export default function Dashboard({ session }) {
     (visibility === 'all' || Boolean(o.is_active) === (visibility === 'active')),
   )
   const isFiltered = Boolean(query) || visibility !== 'all'
+  const listRef = useOfferListMotion(offers, query, visibility)
 
   useEffect(() => {
     if (!notice) return
@@ -151,8 +165,10 @@ export default function Dashboard({ session }) {
           <label className="field"><span>حالة الظهور</span><select value={visibility} onChange={e => setVisibility(e.target.value)}><option value="all">كل العروض</option><option value="active">الظاهرة فقط</option><option value="hidden">المخفية فقط</option></select></label>
         </div>
 
-        {error && <p className="error" role="alert">{error}</p>}
-        {notice && <p className="success-notice" role="status">✓ {notice}</p>}
+        {(error || notice) && <div className={`dashboard-feedback ${error ? 'is-error' : ''}`}>
+          <p role={error ? 'alert' : 'status'}>{error || `✓ ${notice}`}</p>
+          <button type="button" className="icon-btn" aria-label="إغلاق الرسالة" onClick={() => { setError(''); setNotice('') }}>✕</button>
+        </div>}
         {loading && <p className="muted" role="status">جاري تحميل العروض…</p>}
         {!loading && offers.length > 0 && <div className="results-summary"><span className="muted small" role="status">{acting ? 'جاري حفظ التغيير…' : `عرض ${filtered.length} من ${offers.length}`}</span>{isFiltered && <button className="btn ghost small-btn" onClick={() => { setSearch(''); setVisibility('all') }}>مسح البحث والفلتر</button>}</div>}
 
@@ -163,7 +179,7 @@ export default function Dashboard({ session }) {
         )}
         {!loading && offers.length > 0 && filtered.length === 0 && <div className="empty">مفيش عروض مطابقة. جرّب اسم تاني أو غيّر فلتر الظهور.</div>}
 
-        <ul className="offer-list" aria-busy={acting}>
+        <ul className="offer-list" ref={listRef} aria-busy={acting}>
           {!loading && filtered.map(o => {
             const i = offers.findIndex(item => item.id === o.id)
             const flavors = flavorData(o.flavors, site, o.slug)
@@ -222,9 +238,17 @@ export default function Dashboard({ session }) {
           nextOrder={offers.length + 1}
           onClose={() => setEditing(null)}
           onSaved={async () => {
+            setActing(true)
+            setNotice('')
+            setError('')
             setEditing(null)
-            await load()
-            setNotice(editing === 'new' ? 'تمت إضافة العرض.' : 'تم حفظ تعديلات العرض.')
+            try {
+              const refreshed = await load({ background: true })
+              if (refreshed) setNotice(editing === 'new' ? 'تمت إضافة العرض.' : 'تم حفظ تعديلات العرض.')
+              else setError('تم الحفظ، لكن تعذّر تحديث القائمة. حدّث الصفحة للمراجعة.')
+            } finally {
+              setActing(false)
+            }
           }}
         />
       )}
