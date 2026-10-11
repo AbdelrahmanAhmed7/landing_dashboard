@@ -1,18 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { resolvePageContent } from './pageContent.js'
+import { getPublicClient } from './useOffers.js'
 
 const ContentContext = createContext(null)
 const CACHE_PREFIX = 'ht_page_content_v1_'
-let clientPromise
-function getClient() {
-  const url = import.meta.env.VITE_SUPABASE_URL
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY
-  if (!url || !key) return Promise.resolve(null)
-  clientPromise ??= import('@supabase/supabase-js').then(({ createClient }) => createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-  }))
-  return clientPromise
-}
 
 function readCache(site) {
   try { return JSON.parse(localStorage.getItem(CACHE_PREFIX + site)) } catch { return null }
@@ -26,7 +17,7 @@ export function PageContentProvider({ site, children }) {
     const timer = setTimeout(() => controller.abort(), 6000)
     ;(async () => {
       try {
-        const client = await getClient()
+        const client = await getPublicClient()
         if (!client || cancelled || controller.signal.aborted) return
         const { data, error } = await client.from('page_content').select('content').eq('site', site).abortSignal(controller.signal).maybeSingle()
         if (cancelled || error) return

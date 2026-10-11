@@ -7,7 +7,7 @@ const CACHE_PREFIX = 'ht_offers_v2_'
 const TIMEOUT_MS = 6000
 
 let clientPromise
-function getClient() {
+export function getPublicClient() {
   if (!SUPABASE_URL || !SUPABASE_KEY) return Promise.resolve(null)
   clientPromise ??= import('@supabase/supabase-js').then(({ createClient }) =>
     createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -62,7 +62,7 @@ export function useOffers(site, localBundles) {
 
     ;(async () => {
       try {
-        const client = await getClient()
+        const client = await getPublicClient()
         if (!client) return
         const { data, error } = await client
           .from('offers')
