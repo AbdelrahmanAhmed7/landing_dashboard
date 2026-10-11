@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase, SITES } from './supabase'
 import OfferForm from './OfferForm.jsx'
 import { useOfferListMotion } from './useOfferListMotion'
+import { defaultOfferImage } from './offerImages'
 
 const fmt = (n) => Number(n).toLocaleString('en-US')
 const siteLabels = { cola: 'الكولا', 'ice-cream': 'الآيس كريم', spread: 'السبريد' }
@@ -183,10 +184,11 @@ export default function Dashboard({ session }) {
           {!loading && filtered.map(o => {
             const i = offers.findIndex(item => item.id === o.id)
             const flavors = flavorData(o.flavors, site, o.slug)
+            const offerImage = o.image_url || defaultOfferImage(site, o.slug)
             return (
             <li key={o.id} data-offer-id={o.id} className={`offer-card ${o.is_active ? '' : 'inactive'}`} style={{ '--accent': o.accent }}>
               <div className="thumb">
-                {o.image_url ? <img src={o.image_url} alt="" /> : <span className="muted small">بدون صورة</span>}
+                {offerImage ? <img src={offerImage} alt={o.name} loading="lazy" decoding="async" /> : <span className="muted small">بدون صورة</span>}
               </div>
               <div className="info">
                 <div className="title-row">

@@ -4,6 +4,7 @@ import { normalizeFlavors } from './flavorCatalog'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { uploadImage } from './imageUtils'
+import { defaultOfferImage } from './offerImages'
 
 const emptyOffer = (nextOrder) => ({
   slug: `offer-${Date.now().toString(36)}`,
@@ -46,6 +47,8 @@ export default function OfferForm({ site, offer, nextOrder, onClose, onSaved, in
   const [error, setError] = useState('')
   const formRef = useRef(null)
   const locked = busy || uploading !== ''
+  const originalImage = defaultOfferImage(site, f.slug)
+  const previewImage = f.image_url || originalImage
 
   useEffect(() => {
     const previousFocus = document.activeElement
@@ -251,14 +254,14 @@ export default function OfferForm({ site, offer, nextOrder, onClose, onSaved, in
             <h3 id="offer-image-heading" tabIndex={-1}>صورة العرض</h3>
             <div className="upload-row">
               <div className="thumb big">
-                {f.image_url ? <img src={f.image_url} alt="" /> : <span className="muted small">بدون صورة</span>}
+                {previewImage ? <img src={previewImage} alt={f.name || 'صورة العرض'} decoding="async" /> : <span className="muted small">بدون صورة</span>}
               </div>
               <div className="upload-controls">
-                <ImageUpload label={f.image_url ? 'تغيير صورة العرض' : 'رفع صورة العرض'} onSelect={pickMainImage} disabled={locked} busy={uploading === 'main'} />
+                <ImageUpload label={previewImage ? 'تغيير صورة العرض' : 'رفع صورة العرض'} onSelect={pickMainImage} disabled={locked} busy={uploading === 'main'} />
                 {f.image_url && (
-                  <button type="button" className="btn ghost small-btn" disabled={locked} onClick={() => set('image_url', '')}>إزالة الصورة المرفوعة</button>
+                  <button type="button" className="btn ghost small-btn" disabled={locked} onClick={() => set('image_url', '')}>{originalImage ? 'استعادة الصورة الأصلية' : 'إزالة الصورة المرفوعة'}</button>
                 )}
-                <p className="muted small">اختار صورة واضحة للعرض. من غير صورة مرفوعة، الصفحة تستخدم الصورة الافتراضية لو موجودة.</p>
+                <p className="muted small">{f.image_url ? 'الصورة المرفوعة هي اللي هتظهر للعملاء بعد الحفظ.' : originalImage ? 'دي الصورة الأصلية للعرض، وتقدر تستبدلها بصورة جديدة.' : 'ارفع صورة واضحة للعرض عشان تظهر هنا وفي صفحة المنتج.'}</p>
               </div>
             </div>
           </div>
