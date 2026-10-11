@@ -4,12 +4,16 @@ import { supabase, SITES } from './supabase'
 import OfferForm from './OfferForm.jsx'
 import { useOfferListMotion } from './useOfferListMotion'
 import { defaultOfferImage } from './offerImages'
+import PageContentEditor from './PageContentEditor'
 
 const fmt = (n) => Number(n).toLocaleString('en-US')
 const siteLabels = { cola: 'الكولا', 'ice-cream': 'الآيس كريم', spread: 'السبريد' }
 
 export default function Dashboard({ session }) {
   const [site, setSite] = useState(SITES[0].key)
+  const [area, setArea] = useState('offers')
+  const [contentDirty, setContentDirty] = useState(false)
+  const canLeaveContent = () => !contentDirty || window.confirm('في تعديلات نصوص لسه متنشرتش. تحب تتجاهلها وتكمل؟')
   const [offers, setOffers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -122,7 +126,7 @@ export default function Dashboard({ session }) {
         </div>
         <div className="topbar-end">
           <span className="muted small" dir="ltr">{session.user.email}</span>
-          <button className="btn ghost" onClick={() => supabase.auth.signOut()}>خروج</button>
+          <button className="btn ghost" onClick={() => { if (canLeaveContent()) supabase.auth.signOut() }}>خروج</button>
         </div>
       </header>
 
@@ -140,13 +144,19 @@ export default function Dashboard({ session }) {
               aria-pressed={s.key === site}
               disabled={loading || acting}
               className={`tab ${s.key === site ? 'active' : ''}`}
-              onClick={() => { if (s.key === site) return; setOffers([]); setLoading(true); setSite(s.key); setSearch(''); setVisibility('all'); setNotice('') }}
+              onClick={() => { if (s.key === site || !canLeaveContent()) return; setOffers([]); setLoading(true); setSite(s.key); setSearch(''); setVisibility('all'); setNotice('') }}
             >
               <span aria-hidden="true">{s.emoji}</span> {siteLabels[s.key] || s.label}
             </button>
           ))}
         </div>
 
+        <div className="content-area-tabs" role="group" aria-label="نوع الإدارة">
+          <button className={`btn ${area === 'offers' ? 'primary' : 'ghost'}`} aria-pressed={area === 'offers'} onClick={() => { if (area !== 'offers' && canLeaveContent()) setArea('offers') }}>العروض والنكهات</button>
+          <button className={`btn ${area === 'content' ? 'primary' : 'ghost'}`} aria-pressed={area === 'content'} disabled={acting} onClick={() => setArea('content')}>محتوى الصفحة</button>
+        </div>
+
+        {area === 'content' ? <PageContentEditor key={site} site={site} notAdmin={notAdmin} onDirtyChange={setContentDirty} /> : <>
         <div className="section-head">
           <div>
             <h2>عروض {siteLabels[site] || current.label}</h2>
@@ -230,6 +240,7 @@ export default function Dashboard({ session }) {
             </li>
           )})}
         </ul>
+        </>}
       </main>
 
       {editing && (
