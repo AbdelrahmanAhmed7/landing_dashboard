@@ -5,6 +5,7 @@ import OfferForm from './OfferForm.jsx'
 import { useOfferListMotion } from './useOfferListMotion'
 import { defaultOfferImage } from './offerImages'
 import PageContentEditor from './PageContentEditor'
+import ChangeHistory from './ChangeHistory'
 
 const fmt = (n) => Number(n).toLocaleString('en-US')
 const siteLabels = { cola: 'الكولا', 'ice-cream': 'الآيس كريم', spread: 'السبريد' }
@@ -13,7 +14,7 @@ export default function Dashboard({ session }) {
   const [site, setSite] = useState(SITES[0].key)
   const [area, setArea] = useState('offers')
   const [contentDirty, setContentDirty] = useState(false)
-  const canLeaveContent = () => !contentDirty || window.confirm('في تعديلات نصوص لسه متنشرتش. تحب تتجاهلها وتكمل؟')
+  const canLeaveContent = () => !contentDirty || window.confirm('في تعديلات غير محفوظة. تحب تتجاهلها وتكمل؟')
   const [offers, setOffers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -154,9 +155,10 @@ export default function Dashboard({ session }) {
         <div className="content-area-tabs" role="group" aria-label="نوع الإدارة">
           <button className={`btn ${area === 'offers' ? 'primary' : 'ghost'}`} aria-pressed={area === 'offers'} onClick={() => { if (area !== 'offers' && canLeaveContent()) setArea('offers') }}>العروض والنكهات</button>
           <button className={`btn ${area === 'content' ? 'primary' : 'ghost'}`} aria-pressed={area === 'content'} disabled={acting} onClick={() => setArea('content')}>محتوى الصفحة</button>
+          <button className={`btn ${area === 'history' ? 'primary' : 'ghost'}`} aria-pressed={area === 'history'} disabled={acting} onClick={() => { if (area !== 'history' && canLeaveContent()) setArea('history') }}>سجل التعديلات</button>
         </div>
 
-        {area === 'content' ? <PageContentEditor key={site} site={site} notAdmin={notAdmin} onDirtyChange={setContentDirty} /> : <>
+        {area === 'content' ? <PageContentEditor key={site} site={site} userId={session.user.id} notAdmin={notAdmin} onDirtyChange={setContentDirty} /> : area === 'history' ? <ChangeHistory key={site} site={site} notAdmin={notAdmin} onRestored={() => load({ background: true })} /> : <>
         <div className="section-head">
           <div>
             <h2>عروض {siteLabels[site] || current.label}</h2>

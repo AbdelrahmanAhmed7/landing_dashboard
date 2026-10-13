@@ -39,3 +39,7 @@ export function usePageContent() {
   if (!content) throw new Error('PageContentProvider is required')
   return content
 }
+
+export function PageContentPreview({ content, children }) {
+  return <ContentContext.Provider value={content}>{children}</ContentContext.Provider>
+}
