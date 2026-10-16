@@ -335,5 +335,6 @@ input:disabled { opacity: 0.6; }
   .offer-form .flavor-item { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; }
   .offer-form .flavor-item .thumb { width: 40px; height: 46px; }
   .offer-form .checks { grid-template-columns: minmax(0, 1fr); }
+  .offer-form .modal-foot { flex-wrap: wrap; }
   .offer-form .modal-foot .btn { flex: 1; }
 }

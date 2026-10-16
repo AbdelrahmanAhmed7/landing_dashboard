@@ -1,3 +1,5 @@
+import { shippingLabel } from './shipping'
+import ActualPreview from './ActualPreview'
 import FlavorEditor from './FlavorEditor'
 import ImageUpload from './ImageUpload'
 import { normalizeFlavors } from './flavorCatalog'
@@ -21,6 +23,7 @@ const emptyOffer = (nextOrder) => ({
   accent: '#EC4899',
   delivery_note: '',
   free_shipping: false,
+  shipping_fee: '',
   is_active: true,
   sort_order: nextOrder,
 })
@@ -36,12 +39,13 @@ const fromOffer = (offer, nextOrder) => {
   return out
 }
 
-export default function OfferForm({ site, offer, nextOrder, onClose, onSaved, initialSection = 'offer-details-heading' }) {
+export default function OfferForm({ site, offer, offers = [], nextOrder, onClose, onSaved, initialSection = 'offer-details-heading' }) {
   const isEdit = Boolean(offer)
   const [f, setF] = useState(() => {
     const initial = offer ? fromOffer(offer, nextOrder) : emptyOffer(nextOrder)
     return { ...initial, flavors: normalizeFlavors(initial.flavors, site, initial.slug) }
   })
+  const [offerPreview, setOfferPreview] = useState(null)
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState('') // '' | 'main' | stable flavor ID
   const [error, setError] = useState('')
@@ -116,14 +120,55 @@ export default function OfferForm({ site, offer, nextOrder, onClose, onSaved, in
   const validate = () => {
     if (!f.name.trim()) return 'اسم العرض مطلوب'
     if (!/^[a-z0-9-]+$/.test(f.slug)) return 'الـ slug حروف إنجليزي صغيرة وأرقام وشرطة بس'
-    if (f.price === '' || price < 0) return 'السعر مطلوب'
-    if (f.original_price === '' || original < 0) return 'السعر قبل الخصم مطلوب (ممكن يساوي السعر)'
+    if (f.price === '' || !Number.isFinite(price) || price < 0) return 'السعر مطلوب'
+    if (f.original_price === '' || !Number.isFinite(original) || original < 0) return 'السعر قبل الخصم مطلوب (ممكن يساوي السعر)'
     if (original < price) return 'السعر قبل الخصم لازم يكون أكبر من أو يساوي السعر'
     if (!Number.isInteger(Number(f.units)) || Number(f.units) < 1) return 'عدد القطع لازم يكون 1 أو أكتر'
+    if (f.shipping_fee !== '' && (!Number.isFinite(Number(f.shipping_fee)) || Number(f.shipping_fee) < 0 || Number(f.shipping_fee) > 99999999.99)) return 'مبلغ الشحن لازم يكون رقم من صفر إلى 99999999.99'
     if (f.flavors.some((x) => !x.name.trim())) return 'في نكهة اسمها فاضي — اكتب اسمها أو امسحها'
     const keys = f.flavors.map(x => `${x.group}:${x.name.trim()}`)
     if (new Set(keys).size !== keys.length) return 'اسم النكهة متكرر داخل نفس المجموعة'
     return ''
+  }
+
+  const toRow = () => ({
+    site,
+    slug: f.slug,
+    name: f.name.trim(),
+    badge: f.badge.trim() || null,
+    description: f.description.trim() || null,
+    note: f.note.trim() || null,
+    price,
+    original_price: original,
+    units: Number(f.units),
+    units_label: f.units_label.trim() || null,
+    flavors: f.flavors.map((x) => ({
+      id: x.id,
+      group: x.group,
+      is_active: x.is_active,
+      name: x.name.trim(),
+      ...(x.image ? { image: x.image } : {}),
+    })),
+    image_url: f.image_url || null,
+    accent: f.accent,
+    delivery_note: shippingLabel(f, site),
+    shipping_fee: f.shipping_fee === '' ? null : Number(f.shipping_fee),
+    free_shipping: f.free_shipping,
+    is_active: f.is_active,
+    sort_order: Number(f.sort_order) || nextOrder,
+  })
+
+  const openPreview = () => {
+    if (locked) return
+    const problem = validate()
+    if (problem) return setError(problem)
+    if (!isEdit && offers.some(item => item.slug === f.slug)) return setError('الـ slug ده مستخدم قبل كده في نفس الصفحة، غيّره')
+    const row = toRow()
+    const rows = offers.filter(item => item.site === site && item.is_active && item.id !== offer?.id && item.slug !== row.slug)
+    rows.push({ ...row, is_active: true, created_at: offer?.created_at || new Date().toISOString() })
+    rows.sort((a, b) => a.sort_order - b.sort_order || String(a.created_at || '').localeCompare(String(b.created_at || '')))
+    setError('')
+    setOfferPreview({ rows, focusSlug: row.slug, hidden: !row.is_active })
   }
 
   const submit = async (e) => {
@@ -134,31 +179,7 @@ export default function OfferForm({ site, offer, nextOrder, onClose, onSaved, in
     setBusy(true)
     setError('')
     try {
-      const row = {
-        site,
-        slug: f.slug,
-        name: f.name.trim(),
-        badge: f.badge.trim() || null,
-        description: f.description.trim() || null,
-        note: f.note.trim() || null,
-        price,
-        original_price: original,
-        units: Number(f.units),
-        units_label: f.units_label.trim() || null,
-        flavors: f.flavors.map((x) => ({
-          id: x.id,
-          group: x.group,
-          is_active: x.is_active,
-          name: x.name.trim(),
-          ...(x.image ? { image: x.image } : {}),
-        })),
-        image_url: f.image_url || null,
-        accent: f.accent,
-        delivery_note: f.delivery_note.trim() || null,
-        free_shipping: f.free_shipping,
-        is_active: f.is_active,
-        sort_order: Number(f.sort_order) || nextOrder,
-      }
+      const row = toRow()
       const { error: err } = isEdit
         ? await supabase.from('offers').update(row).eq('id', offer.id)
         : await supabase.from('offers').insert(row)
@@ -182,7 +203,8 @@ export default function OfferForm({ site, offer, nextOrder, onClose, onSaved, in
   }
 
   return (
-    <div className="modal-backdrop" onMouseDown={(e) => !locked && e.target === e.currentTarget && onClose()}>
+    <>
+    <div inert={Boolean(offerPreview)} className="modal-backdrop" onMouseDown={(e) => !locked && e.target === e.currentTarget && onClose()}>
       <form ref={formRef} className="modal offer-form" role="dialog" aria-modal="true" aria-labelledby="offer-form-title" aria-describedby="offer-form-hint" onKeyDown={handleKeys} onSubmit={submit}>
         <div className="modal-head">
           <div>
@@ -272,8 +294,8 @@ export default function OfferForm({ site, offer, nextOrder, onClose, onSaved, in
             <h3 id="offer-settings-heading" tabIndex={-1}>التوصيل وإعدادات العرض</h3>
             <div className="grid2">
               <label className="field">
-                <span>ملاحظة التوصيل</span>
-                <input value={f.delivery_note} onChange={(e) => set('delivery_note', e.target.value)} placeholder="🚚 التوصيل مجاني" />
+                <span>الشحن اللي هيظهر للعميل</span>
+                <div className="readonly" role="status">{shippingLabel(f, site)}</div>
               </label>
               <label className="field">
                 <span>لون العرض</span>
@@ -281,6 +303,11 @@ export default function OfferForm({ site, offer, nextOrder, onClose, onSaved, in
               </label>
             </div>
 
+            <label className="field">
+              <span>مبلغ الشحن (ج)</span>
+              <input aria-label="مبلغ الشحن (ج)" aria-describedby="shipping-help" type="number" min="0" max="99999999.99" step="0.01" inputMode="decimal" disabled={f.free_shipping || locked} value={f.shipping_fee} onChange={e => set('shipping_fee', e.target.value)} placeholder={site === 'cola' ? '50' : site === 'spread' ? '0' : 'يُحدد عند تأكيد الطلب'} />
+              <small id="shipping-help" className="muted">اتركه فاضي للإعداد الحالي. التوصيل المجاني يلغي الرسوم، وأعلى مبلغ شحن بيتحسب مرة واحدة للطلب مهما زادت الكمية.</small>
+            </label>
             <div className="checks">
               <label><input type="checkbox" checked={f.free_shipping} onChange={(e) => set('free_shipping', e.target.checked)} /> توصيل مجاني</label>
               <label><input type="checkbox" checked={f.is_active} onChange={(e) => set('is_active', e.target.checked)} /> ظاهر في الصفحة</label>
@@ -301,10 +328,13 @@ export default function OfferForm({ site, offer, nextOrder, onClose, onSaved, in
         {error && <p className="error" role="alert">{error}</p>}
 
         <div className="modal-foot">
+          <button type="button" className="btn ghost" disabled={locked} onClick={openPreview}>معاينة داخل الصفحة</button>
           <button type="button" className="btn ghost" disabled={locked} onClick={onClose}>إلغاء</button>
           <button className="btn primary" disabled={locked}>{busy ? 'جاري الحفظ…' : isEdit ? 'حفظ التعديلات' : 'إضافة العرض'}</button>
         </div>
       </form>
     </div>
+    {offerPreview && <ActualPreview site={site} offerPreview={offerPreview} onClose={() => setOfferPreview(null)} />}
+    </>
   )
 }

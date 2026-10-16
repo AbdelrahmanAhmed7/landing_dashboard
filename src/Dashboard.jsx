@@ -1,3 +1,4 @@
+import { shippingLabel } from './shipping'
 import { flavorData } from './flavorCatalog'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase, SITES } from './supabase'
@@ -220,7 +221,7 @@ export default function Dashboard({ session }) {
                 <div className="offer-meta muted small">
                   <span>{o.units_label || `${o.units} قطعة`}</span>
                   <span>{flavors.flavorOptions.length} نكهة ظاهرة</span>
-                  {o.free_shipping && <span>توصيل مجاني</span>}
+                  <span>{shippingLabel(o, site)}</span>
                   <span dir="ltr">{o.slug}</span>
                 </div>
                 {!flavors.flavorsAvailable && <p className="inline-notice">غير متاح للطلب: راجع النكهات الظاهرة داخل العرض.</p>}
@@ -248,6 +249,7 @@ export default function Dashboard({ session }) {
       {editing && (
         <OfferForm
           site={site}
+          offers={offers}
           offer={editing === 'new' ? null : editing}
           initialSection={editingSection}
           nextOrder={offers.length + 1}

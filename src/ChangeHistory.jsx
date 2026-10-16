@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { contentFields, resolvePageContent } from './pageContent'
 
-const fieldNames = { name: 'اسم العرض', badge: 'الشارة', description: 'الوصف', note: 'الملاحظة', price: 'السعر', original_price: 'السعر قبل الخصم', units: 'عدد القطع', units_label: 'نص عدد القطع', flavors: 'النكهات', image_url: 'الصورة', accent: 'اللون', delivery_note: 'ملاحظة التوصيل', free_shipping: 'الشحن المجاني', is_active: 'ظهور العرض', sort_order: 'الترتيب' }
+const fieldNames = { name: 'اسم العرض', badge: 'الشارة', description: 'الوصف', note: 'الملاحظة', price: 'السعر', original_price: 'السعر قبل الخصم', units: 'عدد القطع', units_label: 'نص عدد القطع', flavors: 'النكهات', image_url: 'الصورة', accent: 'اللون', delivery_note: 'ملاحظة التوصيل', free_shipping: 'الشحن المجاني', shipping_fee: 'مبلغ الشحن', is_active: 'ظهور العرض', sort_order: 'الترتيب' }
 const operations = { baseline: 'النسخة عند تفعيل السجل', insert: 'إضافة', update: 'تعديل', delete: 'حذف' }
 const display = value => value === null || value === undefined || value === '' ? '—' : typeof value === 'boolean' ? value ? 'نعم' : 'لا' : Array.isArray(value) ? value.map(f => `${f.name}${f.is_active === false ? ' (مخفية)' : ''}${f.image ? ' · صورة مرفوعة' : ''}`).join('، ') : String(value)
 

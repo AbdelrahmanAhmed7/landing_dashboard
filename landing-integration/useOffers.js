@@ -1,5 +1,8 @@
+import { shippingFee, shippingLabel } from './shipping.js'
 import { flavorData } from './flavorCatalog.js'
-import { useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+
+export const OffersPreviewContext = createContext(null)
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -35,8 +38,9 @@ export function mapOffer(row, local, site = row.site) {
     ...flavorData(row.flavors, site, row.slug, local),
     image: row.image_url || local?.image || null,
     accent: row.accent,
-    deliveryNote: row.delivery_note || undefined,
-    freeShipping: row.free_shipping,
+    deliveryNote: shippingLabel(row, site),
+    shippingFee: shippingFee(row, site),
+    freeShipping: shippingFee(row, site) === 0,
   }
 }
 
@@ -52,10 +56,13 @@ function readCache(site) {
 // Keep localBundles stable at module scope. Cache raw rows so local image URLs
 // always come from the current build, including after a deployment.
 export function useOffers(site, localBundles) {
-  const [rows, setRows] = useState(() => readCache(site))
+  const preview = useContext(OffersPreviewContext)
+  const previewRows = preview?.site === site ? preview.rows : null
+  const [rows, setRows] = useState(() => previewRows ? null : readCache(site))
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
+    if (previewRows) return
     let cancelled = false
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
@@ -89,13 +96,14 @@ export function useOffers(site, localBundles) {
       clearTimeout(timer)
       controller.abort()
     }
-  }, [site])
+  }, [site, previewRows])
 
   const bundles = useMemo(() => {
-    if (!rows) return localBundles.map(b => ({ ...b, ...flavorData(b.flavors, site, b.id, b) }))
+    const selectedRows = previewRows || rows
+    if (!selectedRows) return localBundles.map(b => ({ ...b, ...flavorData(b.flavors, site, b.id, b) }))
     const localBySlug = Object.fromEntries(localBundles.map((b) => [b.id, b]))
-    return rows.map((row) => mapOffer(row, localBySlug[row.slug], site))
-  }, [rows, localBundles, site])
+    return selectedRows.map((row) => mapOffer(row, localBySlug[row.slug], site))
+  }, [rows, previewRows, localBundles, site])
 
-  return { bundles, ready }
+  return { bundles, ready: Boolean(previewRows) || ready }
 }
