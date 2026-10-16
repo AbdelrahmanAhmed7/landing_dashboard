@@ -1,4 +1,4 @@
-import { shippingLabel } from './shipping'
+import { shippingLabel, shippingFee, shippingMode } from './shipping'
 import ActualPreview from './ActualPreview'
 import FlavorEditor from './FlavorEditor'
 import ImageUpload from './ImageUpload'
@@ -24,6 +24,7 @@ const emptyOffer = (nextOrder) => ({
   delivery_note: '',
   free_shipping: false,
   shipping_fee: '',
+  shipping_mode: '',
   is_active: true,
   sort_order: nextOrder,
 })
@@ -43,7 +44,9 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
   const isEdit = Boolean(offer)
   const [f, setF] = useState(() => {
     const initial = offer ? fromOffer(offer, nextOrder) : emptyOffer(nextOrder)
-    return { ...initial, flavors: normalizeFlavors(initial.flavors, site, initial.slug) }
+    const mode = shippingMode(initial, site)
+    const fee = initial.shipping_fee !== '' ? initial.shipping_fee : shippingFee(initial, site)
+    return { ...initial, shipping_mode: mode, free_shipping: mode === 'free', shipping_fee: fee ?? '', flavors: normalizeFlavors(initial.flavors, site, initial.slug) }
   })
   const [offerPreview, setOfferPreview] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -124,7 +127,8 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
     if (f.original_price === '' || !Number.isFinite(original) || original < 0) return 'السعر قبل الخصم مطلوب (ممكن يساوي السعر)'
     if (original < price) return 'السعر قبل الخصم لازم يكون أكبر من أو يساوي السعر'
     if (!Number.isInteger(Number(f.units)) || Number(f.units) < 1) return 'عدد القطع لازم يكون 1 أو أكتر'
-    if (f.shipping_fee !== '' && (!Number.isFinite(Number(f.shipping_fee)) || Number(f.shipping_fee) < 0 || Number(f.shipping_fee) > 99999999.99)) return 'مبلغ الشحن لازم يكون رقم من صفر إلى 99999999.99'
+    if (f.shipping_mode === 'fixed' && f.shipping_fee === '') return 'اكتب مبلغ الشحن أو اختار يتحدد مع الكول سنتر'
+    if (f.shipping_mode === 'fixed' && (!Number.isFinite(Number(f.shipping_fee)) || Number(f.shipping_fee) < 0 || Number(f.shipping_fee) > 99999999.99)) return 'مبلغ الشحن لازم يكون رقم من صفر إلى 99999999.99'
     if (f.flavors.some((x) => !x.name.trim())) return 'في نكهة اسمها فاضي — اكتب اسمها أو امسحها'
     const keys = f.flavors.map(x => `${x.group}:${x.name.trim()}`)
     if (new Set(keys).size !== keys.length) return 'اسم النكهة متكرر داخل نفس المجموعة'
@@ -152,8 +156,9 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
     image_url: f.image_url || null,
     accent: f.accent,
     delivery_note: shippingLabel(f, site),
-    shipping_fee: f.shipping_fee === '' ? null : Number(f.shipping_fee),
-    free_shipping: f.free_shipping,
+    shipping_fee: f.shipping_mode === 'fixed' ? Number(f.shipping_fee) : null,
+    shipping_mode: f.shipping_mode,
+    free_shipping: f.shipping_mode === 'free',
     is_active: f.is_active,
     sort_order: Number(f.sort_order) || nextOrder,
   })
@@ -304,12 +309,20 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
             </div>
 
             <label className="field">
-              <span>مبلغ الشحن (ج)</span>
-              <input aria-label="مبلغ الشحن (ج)" aria-describedby="shipping-help" type="number" min="0" max="99999999.99" step="0.01" inputMode="decimal" disabled={f.free_shipping || locked} value={f.shipping_fee} onChange={e => set('shipping_fee', e.target.value)} placeholder={site === 'cola' ? '50' : site === 'spread' ? '0' : 'يُحدد عند تأكيد الطلب'} />
-              <small id="shipping-help" className="muted">اتركه فاضي للإعداد الحالي. التوصيل المجاني يلغي الرسوم، وأعلى مبلغ شحن بيتحسب مرة واحدة للطلب مهما زادت الكمية.</small>
+              <span>طريقة الشحن</span>
+              <select aria-label="طريقة الشحن" disabled={locked} value={f.shipping_mode} onChange={e => { const mode = e.target.value; setF(previous => ({ ...previous, shipping_mode: mode, free_shipping: mode === 'free' })) }}>
+                <option value="free">توصيل مجاني</option>
+                <option value="fixed">بمبلغ محدد</option>
+                <option value="call_center">يتحدد مع الكول سنتر</option>
+              </select>
             </label>
+            {f.shipping_mode === 'fixed' && <label className="field">
+              <span>مبلغ الشحن (ج)</span>
+              <input aria-label="مبلغ الشحن (ج)" aria-describedby="shipping-help" type="number" min="0" max="99999999.99" step="0.01" inputMode="decimal" required disabled={locked} value={f.shipping_fee} onChange={e => set('shipping_fee', e.target.value)} />
+              <small id="shipping-help" className="muted">أعلى مبلغ شحن بيتحسب مرة واحدة للطلب مهما زادت الكمية.</small>
+            </label>}
+            {f.shipping_mode === 'call_center' && <p className="content-hint">مش هنفترض مبلغ للشحن. العميل هيشوف إن الإجمالي مبدئي والشحن يتأكد مع الكول سنتر، والمعلومة هتتبعت مع الطلب.</p>}
             <div className="checks">
-              <label><input type="checkbox" checked={f.free_shipping} onChange={(e) => set('free_shipping', e.target.checked)} /> توصيل مجاني</label>
               <label><input type="checkbox" checked={f.is_active} onChange={(e) => set('is_active', e.target.checked)} /> ظاهر في الصفحة</label>
             </div>
 

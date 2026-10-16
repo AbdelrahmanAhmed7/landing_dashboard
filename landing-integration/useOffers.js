@@ -1,4 +1,4 @@
-import { shippingFee, shippingLabel } from './shipping.js'
+import { shippingFee, shippingLabel, shippingMode } from './shipping.js'
 import { flavorData } from './flavorCatalog.js'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
@@ -40,6 +40,7 @@ export function mapOffer(row, local, site = row.site) {
     accent: row.accent,
     deliveryNote: shippingLabel(row, site),
     shippingFee: shippingFee(row, site),
+    shippingMode: shippingMode(row, site),
     freeShipping: shippingFee(row, site) === 0,
   }
 }

@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { contentFields, resolvePageContent } from './pageContent'
 
-const fieldNames = { name: 'اسم العرض', badge: 'الشارة', description: 'الوصف', note: 'الملاحظة', price: 'السعر', original_price: 'السعر قبل الخصم', units: 'عدد القطع', units_label: 'نص عدد القطع', flavors: 'النكهات', image_url: 'الصورة', accent: 'اللون', delivery_note: 'ملاحظة التوصيل', free_shipping: 'الشحن المجاني', shipping_fee: 'مبلغ الشحن', is_active: 'ظهور العرض', sort_order: 'الترتيب' }
+const fieldNames = { name: 'اسم العرض', badge: 'الشارة', description: 'الوصف', note: 'الملاحظة', price: 'السعر', original_price: 'السعر قبل الخصم', units: 'عدد القطع', units_label: 'نص عدد القطع', flavors: 'النكهات', image_url: 'الصورة', accent: 'اللون', delivery_note: 'ملاحظة التوصيل', free_shipping: 'الشحن المجاني', shipping_fee: 'مبلغ الشحن', shipping_mode: 'طريقة الشحن', is_active: 'ظهور العرض', sort_order: 'الترتيب' }
 const operations = { baseline: 'النسخة عند تفعيل السجل', insert: 'إضافة', update: 'تعديل', delete: 'حذف' }
+const modeLabels = { free: 'توصيل مجاني', fixed: 'بمبلغ محدد', call_center: 'يتحدد مع الكول سنتر' }
+const format = (key, value) => key === 'shipping_mode' ? modeLabels[value] || 'الإعداد السابق' : display(value)
 const display = value => value === null || value === undefined || value === '' ? '—' : typeof value === 'boolean' ? value ? 'نعم' : 'لا' : Array.isArray(value) ? value.map(f => `${f.name}${f.is_active === false ? ' (مخفية)' : ''}${f.image ? ' · صورة مرفوعة' : ''}`).join('، ') : String(value)
 
 export function revisionChanges(site, type, previous, next) {
   const before = type === 'page_content' && previous ? resolvePageContent(site, previous.content) : previous || {}
   const after = type === 'page_content' && next ? resolvePageContent(site, next.content) : next || {}
   const fields = type === 'page_content' ? contentFields(site).map(f => [f.key, f.label]) : Object.entries(fieldNames)
-  return fields.filter(([key]) => JSON.stringify(before[key]) !== JSON.stringify(after[key])).map(([key, label]) => ({ key, label, before: display(before[key]), after: display(after[key]) }))
+  return fields.filter(([key]) => JSON.stringify(before[key]) !== JSON.stringify(after[key])).map(([key, label]) => ({ key, label, before: format(key, before[key]), after: format(key, after[key]) }))
 }
 
 export default function ChangeHistory({ site, notAdmin, onRestored }) {
