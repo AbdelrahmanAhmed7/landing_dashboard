@@ -6,7 +6,7 @@ export const OffersPreviewContext = createContext(null)
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
-const CACHE_PREFIX = 'ht_offers_v2_'
+const CACHE_PREFIX = 'ht_offers_v3_'
 const TIMEOUT_MS = 6000
 
 let clientPromise

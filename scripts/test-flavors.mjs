@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { defaultFlavors, flavorData, normalizeFlavors } from '../src/flavorCatalog.js';
 
 const legacy = flavorData([], 'cola', 'summer');
-assert.deepEqual(legacy.flavors, ['كولا', 'ليمون نعناع']);
+assert.deepEqual(legacy.flavors, ['كولا', 'أناناس', 'ليمون نعناع', 'برتقال', 'تفاح أخضر', 'توت مشكل']);
 assert.equal(legacy.flavorsAvailable, true);
 const hidden = defaultFlavors('cola', 'summer').map(f => ({ ...f, is_active: false }));
 assert.deepEqual(flavorData(hidden, 'cola', 'summer').flavors, []);

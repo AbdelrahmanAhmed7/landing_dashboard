@@ -1,6 +1,6 @@
 // Shared contract: retain hidden entries and stable IDs in offers.flavors.
 const catalog = {
-  cola: [['cola', 'كولا'], ['lemon', 'ليمون نعناع']],
+  cola: [['cola', 'كولا'], ['pineapple', 'أناناس'], ['lemon', 'ليمون نعناع'], ['orange', 'برتقال'], ['greenApple', 'تفاح أخضر'], ['mixBerries', 'توت مشكل']],
   spread: [['kids', 'أطفال'], ['original', 'أوجينال'], ['protein', 'بروتين'], ['vegan', 'فيجن'], ['prestige', 'بريستيج'], ['coconut', 'جوز هند', false], ['peanut', 'زبدة فول سوداني', false], ['highProtein', 'زبدة فول سوداني عالي البروتين', false], ['chocolatePeanut', 'زبدة فول سوداني شيكولاتة', false]],
   chocoBar: [['darkHazel', 'دارك بالبندق'], ['darkAlmond', 'دارك باللوز'], ['darkPlain', 'دارك سادة'], ['milkHazel', 'ميلك بالبندق'], ['milkAlmond', 'ميلك باللوز'], ['milkPlain', 'ميلك سادة']],
   icecream: ['فانيليا', 'شوكولاتة', 'فراولة', 'مانجو', 'بلوبيري', 'فسدق', 'بندق', 'كنتالوب'].map((name, i) => [`ice-${i}`, name]),
