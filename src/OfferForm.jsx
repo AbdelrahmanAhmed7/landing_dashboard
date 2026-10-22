@@ -138,6 +138,18 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
     return { ...p, selection: { ...p.selection, items }, flavors: seeds.length ? [...p.flavors, ...seeds] : p.flavors }
   })
 
+  const autoSingleFlavor = (key) => setF((p) => {
+    const item = p.selection?.items.find(entry => entry.key === key)
+    if (!item) return p
+    const group = item.key
+    const items = p.selection.items.map(entry => entry.key === key ? { ...entry, choose: 1, group } : entry)
+    const hasFlavors = p.flavors.some(fl => fl.group === group)
+    const flavors = hasFlavors
+      ? p.flavors
+      : [...p.flavors, { id: crypto.randomUUID(), group, name: item.label.trim() || 'النكهة', is_active: true }]
+    return { ...p, selection: { ...p.selection, items }, flavors }
+  })
+
   const validate = () => {
     if (!f.name.trim()) return 'اسم العرض مطلوب'
     if (!/^[a-z0-9-]+$/.test(f.slug)) return 'الـ slug حروف إنجليزي صغيرة وأرقام وشرطة بس'
@@ -345,7 +357,7 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
             </div>
           </div>
 
-          {isBundle && <BundleEditor selection={f.selection} onChange={value => set('selection', value)} onGroupChange={changeBundleGroup} />}
+          {isBundle && <BundleEditor selection={f.selection} flavors={f.flavors} onChange={value => set('selection', value)} onGroupChange={changeBundleGroup} onAutoFlavor={autoSingleFlavor} />}
 
           <FlavorEditor site={site} slug={f.slug} selection={f.selection} flavors={f.flavors} onChange={value => set('flavors', value)} onUpload={pickFlavorImage} uploading={uploading} />
 

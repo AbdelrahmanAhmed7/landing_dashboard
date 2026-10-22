@@ -2,7 +2,7 @@ import { catalogGroups, groupLabels } from './flavorCatalog'
 
 const totalUnits = selection => (selection?.items || []).reduce((sum, item) => sum + item.qty, 0)
 
-export default function BundleEditor({ selection, onChange, onGroupChange }) {
+export default function BundleEditor({ selection, flavors = [], onChange, onGroupChange, onAutoFlavor = () => {} }) {
   const items = selection?.items || []
   const patch = (key, changes) => onChange({
     version: 1,
@@ -31,6 +31,8 @@ export default function BundleEditor({ selection, onChange, onGroupChange }) {
     {items.length === 0 && <p className="inline-notice">ضيف مكوّن واحد على الأقل عشان الباندل يبقى متاح للطلب.</p>}
     {items.map((item, i) => {
       const known = catalogGroups.includes(item.group)
+      const groupFlavors = item.group ? flavors.filter(fl => fl.group === item.group && fl.is_active && fl.name.trim()) : []
+      const singleFlavor = item.choose === 1 && groupFlavors.length === 1 ? groupFlavors[0] : null
       return <div className="bundle-item" key={item.key}>
         <div className="bundle-item-head">
           <strong>مكوّن {i + 1}</strong>
@@ -57,9 +59,25 @@ export default function BundleEditor({ selection, onChange, onGroupChange }) {
             {catalogGroups.map(group => <option key={group} value={group}>{groupLabels[group]}</option>)}
             <option value="__custom">مخصصة — نكهات خاصة بالمكوّن</option>
           </select>
-          <small className="muted">{item.group ? 'نكهات المكوّن بتتدار من قسم النكهات تحت.' : 'لازم تختار مجموعة عشان تقدر تضيف نكهات للمكوّن.'}</small>
+          <small className="muted">
+            {singleFlavor
+              ? `المجموعة فيها نكهة واحدة (${singleFlavor.name}) — العميل مش هيختار، هتتحدد تلقائي.`
+              : item.group
+                ? 'نكهات المكوّن بتتدار من قسم النكهات تحت.'
+                : 'لازم تختار مجموعة عشان تقدر تضيف نكهات للمكوّن.'}
+          </small>
         </label>}
-        <small className="muted">{item.choose === 0 ? 'مكوّن ثابت من غير اختيار.' : `العميل هيختار ${item.choose} نكهة من نكهات المجموعة.`}</small>
+        {item.choose > 0 && <div className="bundle-auto-row">
+          <button type="button" className="btn ghost small-btn" onClick={() => onAutoFlavor(item.key)}>نكهة واحدة تلقائي</button>
+          <small className="muted">تنشئ نكهة باسم المكوّن وتخلي اختيارها تلقائي للعميل.</small>
+        </div>}
+        <small className="muted">
+          {item.choose === 0
+            ? 'مكوّن ثابت — اسمه هو اللي هيظهر في الطلب من غير اختيار نكهة.'
+            : singleFlavor
+              ? `النكهة الوحيدة «${singleFlavor.name}» هتتحدد تلقائي للعميل.`
+              : `العميل هيختار ${item.choose} نكهة من نكهات المجموعة.`}
+        </small>
       </div>
     })}
     <div className="bundle-summary">إجمالي القطع في الباندل: <strong>{totalUnits(selection)}</strong></div>

@@ -208,6 +208,7 @@ input:disabled { opacity: 0.6; }
 .flavor-tools label { display: flex; align-items: center; gap: 6px; }
 .bundle-item { padding: 12px; border: 1px solid var(--line); border-radius: 10px; display: grid; gap: 12px; }
 .bundle-item-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bundle-auto-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .bundle-summary { font-weight: 700; }
 .bundle-summary strong { color: var(--ok); }
 
