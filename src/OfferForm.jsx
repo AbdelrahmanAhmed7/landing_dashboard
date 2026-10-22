@@ -133,8 +133,14 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
   })
 
   const changeBundleGroup = (key, group) => setF((p) => {
+    const current = p.selection.items.find(item => item.key === key)
     const items = p.selection.items.map(item => item.key === key ? { ...item, group } : item)
-    const seeds = group && !p.flavors.some(fl => fl.group === group) ? defaultFlavorsForGroup(group) : []
+    const defaults = group ? defaultFlavorsForGroup(group) : []
+    const seeds = !group || p.flavors.some(fl => fl.group === group)
+      ? []
+      : defaults.length
+        ? defaults
+        : [{ id: crypto.randomUUID(), group, name: current?.label.trim() || 'النكهة', is_active: true }]
     return { ...p, selection: { ...p.selection, items }, flavors: seeds.length ? [...p.flavors, ...seeds] : p.flavors }
   })
 
