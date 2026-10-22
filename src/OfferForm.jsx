@@ -1,8 +1,9 @@
 import { shippingLabel, shippingFee, shippingMode } from './shipping'
 import ActualPreview from './ActualPreview'
 import FlavorEditor from './FlavorEditor'
+import BundleEditor from './BundleEditor'
 import ImageUpload from './ImageUpload'
-import { normalizeFlavors } from './flavorCatalog'
+import { defaultFlavorsForGroup, normalizeFlavors, normalizeSelection } from './flavorCatalog'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { uploadImage } from './imageUtils'
@@ -18,6 +19,7 @@ const emptyOffer = (nextOrder) => ({
   original_price: '',
   units: 1,
   units_label: '',
+  selection: null,
   flavors: [],
   image_url: '',
   accent: '#EC4899',
@@ -46,7 +48,8 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
     const initial = offer ? fromOffer(offer, nextOrder) : emptyOffer(nextOrder)
     const mode = shippingMode(initial, site)
     const fee = initial.shipping_fee !== '' ? initial.shipping_fee : shippingFee(initial, site)
-    return { ...initial, shipping_mode: mode, free_shipping: mode === 'free', shipping_fee: fee ?? '', flavors: normalizeFlavors(initial.flavors, site, initial.slug) }
+    const selection = normalizeSelection(initial.selection)
+    return { ...initial, selection, shipping_mode: mode, free_shipping: mode === 'free', shipping_fee: fee ?? '', flavors: normalizeFlavors(initial.flavors, site, initial.slug, selection) }
   })
   const [offerPreview, setOfferPreview] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -56,6 +59,9 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
   const locked = busy || uploading !== ''
   const originalImage = defaultOfferImage(site, f.slug)
   const previewImage = f.image_url || originalImage
+  const isBundle = Boolean(f.selection)
+  const bundleUnits = isBundle ? f.selection.items.reduce((sum, item) => sum + Number(item.qty), 0) : 0
+  const bundleGroups = isBundle ? [...new Set(f.selection.items.filter(item => item.choose > 0).map(item => item.group))] : []
 
   useEffect(() => {
     const previousFocus = document.activeElement
@@ -120,17 +126,43 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
   const setFlavor = (id, patch) =>
     setF((p) => ({ ...p, flavors: p.flavors.map(x => x.id === id ? { ...x, ...patch } : x) }))
 
+  const setSelectionMode = (mode) => setF((p) => {
+    if (mode !== 'components') return { ...p, units: p.selection ? p.selection.items.reduce((sum, item) => sum + Number(item.qty), 0) : p.units, selection: null }
+    const units = Math.max(1, Number(p.units) || 1)
+    return { ...p, selection: p.selection || { version: 1, mode: 'components', items: [{ key: 'item-1', label: 'المكوّن 1', qty: units, choose: 0, group: null }] } }
+  })
+
+  const changeBundleGroup = (key, group) => setF((p) => {
+    const items = p.selection.items.map(item => item.key === key ? { ...item, group } : item)
+    const seeds = group && !p.flavors.some(fl => fl.group === group) ? defaultFlavorsForGroup(group) : []
+    return { ...p, selection: { ...p.selection, items }, flavors: seeds.length ? [...p.flavors, ...seeds] : p.flavors }
+  })
+
   const validate = () => {
     if (!f.name.trim()) return 'اسم العرض مطلوب'
     if (!/^[a-z0-9-]+$/.test(f.slug)) return 'الـ slug حروف إنجليزي صغيرة وأرقام وشرطة بس'
     if (f.price === '' || !Number.isFinite(price) || price < 0) return 'السعر مطلوب'
     if (f.original_price === '' || !Number.isFinite(original) || original < 0) return 'السعر قبل الخصم مطلوب (ممكن يساوي السعر)'
     if (original < price) return 'السعر قبل الخصم لازم يكون أكبر من أو يساوي السعر'
-    if (!Number.isInteger(Number(f.units)) || Number(f.units) < 1) return 'عدد القطع لازم يكون 1 أو أكتر'
+    if (!isBundle && (!Number.isInteger(Number(f.units)) || Number(f.units) < 1)) return 'عدد القطع لازم يكون 1 أو أكتر'
+    if (isBundle) {
+      if (f.selection.items.length === 0) return 'ضيف مكوّن واحد على الأقل للباندل'
+      if (f.selection.items.some(item => !item.label.trim())) return 'في مكوّن اسمه فاضي — اكتب اسمه أو امسحه'
+      if (new Set(f.selection.items.map(item => item.key)).size !== f.selection.items.length) return 'في مكوّنين بنفس المعرّف — امسح واحد أو غيّر الاسم'
+      if (f.selection.items.some(item => !Number.isInteger(Number(item.qty)) || Number(item.qty) < 1)) return 'كمية كل مكوّن لازم تكون 1 أو أكتر'
+      if (f.selection.items.some(item => Number(item.choose) > Number(item.qty))) return 'عدد النكهات المطلوبة أكبر من كمية المكوّن'
+      if (f.selection.items.some(item => item.choose > 0 && !item.group)) return 'اختار مجموعة نكهات لكل مكوّن فيه اختيار'
+      const shortage = f.selection.items.find(item => {
+        if (item.choose < 1) return false
+        return f.flavors.filter(fl => fl.group === item.group && fl.is_active && fl.name.trim()).length < item.choose
+      })
+      if (shortage) return `مكوّن «${shortage.label}» محتاج ${shortage.choose} نكهات ظاهرة على الأقل`
+    }
     if (f.shipping_mode === 'fixed' && f.shipping_fee === '') return 'اكتب مبلغ الشحن أو اختار يتحدد مع الكول سنتر'
     if (f.shipping_mode === 'fixed' && (!Number.isFinite(Number(f.shipping_fee)) || Number(f.shipping_fee) < 0 || Number(f.shipping_fee) > 99999999.99)) return 'مبلغ الشحن لازم يكون رقم من صفر إلى 99999999.99'
-    if (f.flavors.some((x) => !x.name.trim())) return 'في نكهة اسمها فاضي — اكتب اسمها أو امسحها'
-    const keys = f.flavors.map(x => `${x.group}:${x.name.trim()}`)
+    const usedFlavors = isBundle ? f.flavors.filter(x => bundleGroups.includes(x.group)) : f.flavors
+    if (usedFlavors.some((x) => !x.name.trim())) return 'في نكهة اسمها فاضي — اكتب اسمها أو امسحها'
+    const keys = usedFlavors.map(x => `${x.group}:${x.name.trim()}`)
     if (new Set(keys).size !== keys.length) return 'اسم النكهة متكرر داخل نفس المجموعة'
     return ''
   }
@@ -144,9 +176,20 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
     note: f.note.trim() || null,
     price,
     original_price: original,
-    units: Number(f.units),
+    units: isBundle ? bundleUnits : Number(f.units),
     units_label: f.units_label.trim() || null,
-    flavors: f.flavors.map((x) => ({
+    selection: isBundle ? {
+      version: 1,
+      mode: 'components',
+      items: f.selection.items.map(({ key, label, qty, choose, group }) => ({
+        key,
+        label: label.trim(),
+        qty: Number(qty),
+        choose: Number(choose),
+        ...(choose > 0 ? { group } : {}),
+      })),
+    } : null,
+    flavors: f.flavors.filter(x => !isBundle || bundleGroups.includes(x.group)).map((x) => ({
       id: x.id,
       group: x.group,
       is_active: x.is_active,
@@ -219,7 +262,7 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
           <button type="button" className="icon-btn" disabled={locked} onClick={onClose} aria-label="إغلاق">✕</button>
         </div>
         <nav className="form-nav" aria-label="أقسام العرض">
-          {[['offer-details-heading', 'البيانات'], ['offer-price-heading', 'السعر والكمية'], ['offer-image-heading', 'الصورة'], ['offer-flavors-heading', 'النكهات'], ['offer-settings-heading', 'الإعدادات']].map(([id, label]) => <button type="button" key={id} onClick={() => jumpTo(id)}>{label}</button>)}
+          {[['offer-details-heading', 'البيانات'], ['offer-price-heading', 'السعر والكمية'], ['offer-image-heading', 'الصورة'], ...(isBundle ? [['offer-bundle-heading', 'المكوّنات']] : []), ['offer-flavors-heading', 'النكهات'], ['offer-settings-heading', 'الإعدادات']].map(([id, label]) => <button type="button" key={id} onClick={() => jumpTo(id)}>{label}</button>)}
         </nav>
 
         <div className="modal-body">
@@ -264,11 +307,20 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
               </div>
             </div>
 
+            <label className="field">
+              <span>طريقة اختيار العميل</span>
+              <select value={isBundle ? 'components' : 'pool'} disabled={locked} onChange={e => setSelectionMode(e.target.value)}>
+                <option value="pool">يوزّع القطع على النكهات</option>
+                <option value="components">باندل مكوّنات — كل مكوّن اختياره مستقل</option>
+              </select>
+              <small className="muted">{isBundle ? 'مناسب لما الباندل فيه أكتر من منتج، وكل منتج له اختيار أو كمية مختلفة.' : 'الوضع الحالي: العميل بيوزّع عدد القطع على نكهات العرض.'}</small>
+            </label>
+
             <div className="grid2">
               <label className="field">
                 <span>عدد القطع في العرض *</span>
-                <input required type="number" min="1" step="1" value={f.units} onChange={(e) => set('units', e.target.value)} />
-                <small className="muted">ده الرقم اللي العميل لازم يوزّع نكهاته عليه</small>
+                <input required type="number" min="1" step="1" value={isBundle ? bundleUnits : f.units} onChange={(e) => set('units', e.target.value)} disabled={isBundle} />
+                <small className="muted">{isBundle ? 'محسوب تلقائيًا من كميات المكوّنات.' : 'ده الرقم اللي العميل لازم يوزّع نكهاته عليه'}</small>
               </label>
               <label className="field">
                 <span>نص عدد القطع</span>
@@ -293,7 +345,9 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
             </div>
           </div>
 
-          <FlavorEditor site={site} slug={f.slug} flavors={f.flavors} onChange={value => set('flavors', value)} onUpload={pickFlavorImage} uploading={uploading} />
+          {isBundle && <BundleEditor selection={f.selection} onChange={value => set('selection', value)} onGroupChange={changeBundleGroup} />}
+
+          <FlavorEditor site={site} slug={f.slug} selection={f.selection} flavors={f.flavors} onChange={value => set('flavors', value)} onUpload={pickFlavorImage} uploading={uploading} />
 
           <section className="offer-form-section" aria-labelledby="offer-settings-heading">
             <h3 id="offer-settings-heading" tabIndex={-1}>التوصيل وإعدادات العرض</h3>
@@ -328,7 +382,7 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
 
             <label className="field">
               <span>الـ slug (معرّف ثابت بالإنجليزي) *</span>
-              <input dir="ltr" value={f.slug} onChange={(e) => { const slug = e.target.value.toLowerCase(); setF(p => ({ ...p, slug, flavors: normalizeFlavors(p.flavors.map(({ group, ...fl }) => fl), site, slug) })) }} disabled={isEdit} />
+              <input dir="ltr" value={f.slug} onChange={(e) => { const slug = e.target.value.toLowerCase(); setF(p => ({ ...p, slug, flavors: normalizeFlavors(p.flavors.map(({ group, ...fl }) => fl), site, slug, p.selection) })) }} disabled={isEdit} />
               <small className="muted">
                 {isEdit
                   ? 'مش بيتغيّر بعد الإنشاء، لأن كود الـ landing بيعتمد عليه.'

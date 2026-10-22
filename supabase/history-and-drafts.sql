@@ -97,12 +97,12 @@ begin
     if current_version is distinct from p_expected_version then raise exception 'Offer changed' using errcode='40001'; end if;
     offer := jsonb_populate_record(null::public.offers,snapshot);
     if current_version is null then
-      insert into public.offers(id,site,slug,name,badge,description,note,price,original_price,units,units_label,flavors,image_url,accent,delivery_note,free_shipping,is_active,sort_order)
-      values(offer.id,offer.site,offer.slug,offer.name,offer.badge,offer.description,offer.note,offer.price,offer.original_price,offer.units,offer.units_label,offer.flavors,offer.image_url,offer.accent,offer.delivery_note,offer.free_shipping,offer.is_active,offer.sort_order)
+      insert into public.offers(id,site,slug,name,badge,description,note,price,original_price,units,units_label,selection,flavors,image_url,accent,delivery_note,free_shipping,is_active,sort_order)
+      values(offer.id,offer.site,offer.slug,offer.name,offer.badge,offer.description,offer.note,offer.price,offer.original_price,offer.units,offer.units_label,offer.selection,offer.flavors,offer.image_url,offer.accent,offer.delivery_note,offer.free_shipping,offer.is_active,offer.sort_order)
       returning to_jsonb(offers) into result;
     else
       update public.offers set name=offer.name,badge=offer.badge,description=offer.description,note=offer.note,price=offer.price,original_price=offer.original_price,
-        units=offer.units,units_label=offer.units_label,flavors=offer.flavors,image_url=offer.image_url,accent=offer.accent,delivery_note=offer.delivery_note,
+        units=offer.units,units_label=offer.units_label,selection=offer.selection,flavors=offer.flavors,image_url=offer.image_url,accent=offer.accent,delivery_note=offer.delivery_note,
         free_shipping=offer.free_shipping,is_active=offer.is_active,sort_order=offer.sort_order
       where id=offer.id returning to_jsonb(offers) into result;
     end if;

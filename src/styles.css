@@ -206,13 +206,18 @@ input:disabled { opacity: 0.6; }
 .flavor-item input { min-width: 0; }
 .flavor-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
 .flavor-tools label { display: flex; align-items: center; gap: 6px; }
+.bundle-item { padding: 12px; border: 1px solid var(--line); border-radius: 10px; display: grid; gap: 12px; }
+.bundle-item-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bundle-summary { font-weight: 700; }
+.bundle-summary strong { color: var(--ok); }
 
 /* Offer editor: helper text must not stretch neighboring labels or inputs. */
 .offer-form { min-width: 0; max-width: 760px; max-height: calc(100dvh - 32px); overflow: hidden; }
 .offer-form .modal-head, .offer-form .modal-foot { flex-shrink: 0; padding: 16px 24px; }
 .offer-form .modal-body { min-height: 0; display: grid; gap: 24px; padding: 24px; }
-.offer-form-section, .offer-form .flavor-editor { display: grid; gap: 16px; min-width: 0; }
+.offer-form-section, .offer-form .flavor-editor, .offer-form .bundle-editor { display: grid; gap: 16px; min-width: 0; }
 .offer-form-section + .offer-form-section,
+.offer-form .bundle-editor,
 .offer-form .flavor-editor,
 .offer-form .flavor-editor + .offer-form-section { border-top: 1px solid var(--line); padding-top: 24px; }
 .offer-form-section > h3, .offer-form-section > span, .offer-form .flavor-editor > span { font-size: 1rem; font-weight: 700; line-height: 1.5; }

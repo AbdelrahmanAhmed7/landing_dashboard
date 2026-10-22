@@ -196,7 +196,7 @@ export default function Dashboard({ session }) {
         <ul className="offer-list" ref={listRef} aria-busy={acting}>
           {!loading && filtered.map(o => {
             const i = offers.findIndex(item => item.id === o.id)
-            const flavors = flavorData(o.flavors, site, o.slug)
+            const flavors = flavorData(o.flavors, site, o.slug, null, o.selection)
             const offerImage = o.image_url || defaultOfferImage(site, o.slug)
             return (
             <li key={o.id} data-offer-id={o.id} className={`offer-card ${o.is_active ? '' : 'inactive'}`} style={{ '--accent': o.accent }}>
@@ -220,7 +220,7 @@ export default function Dashboard({ session }) {
                 </div>
                 <div className="offer-meta muted small">
                   <span>{o.units_label || `${o.units} قطعة`}</span>
-                  <span>{flavors.flavorOptions.length} نكهة ظاهرة</span>
+                  <span>{flavors.selection ? `باندل · ${flavors.selection.items.length} مكوّن` : `${flavors.flavorOptions.length} نكهة ظاهرة`}</span>
                   <span>{shippingLabel(o, site)}</span>
                   <span dir="ltr">{o.slug}</span>
                 </div>

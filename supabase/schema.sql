@@ -34,6 +34,8 @@ create table if not exists public.offers (
   original_price numeric(10, 2) not null check (original_price >= 0),
   units          int  not null default 1 check (units >= 1),
   units_label    text,
+  -- Optional bundle components: {"version":1,"mode":"components","items":[{"key":"spread","label":"سبريد","qty":1,"choose":1,"group":"spread"}]}
+  selection      jsonb,
   -- [{ "name": "فانيليا", "image": "https://...(اختياري)" }]
   flavors        jsonb not null default '[]'::jsonb,
   image_url      text,
