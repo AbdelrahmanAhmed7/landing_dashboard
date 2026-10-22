@@ -47,4 +47,9 @@ assert.equal(bundleData.selection.mode, 'components');
 assert.equal(flavorData(bundleFlavors.map(f => ({ ...f, is_active: false })), 'spread', 'bundle-3', null, bundle).flavorsAvailable, false);
 assert.equal(flavorData([{ id: 'kids', group: 'spread', name: 'أطفال', is_active: true }], 'spread', 'bundle-3', null, { ...bundle, items: [{ key: 'spread', label: 'سبريد', qty: 2, choose: 2, group: 'spread' }] }).flavorsAvailable, false);
 assert.deepEqual(defaultFlavors('spread', 'bundle-3', bundle).map(f => f.group), defaultFlavorsForGroup('spread').map(f => f.group));
-console.log('Flavor contract checks passed: legacy data, hidden groups, stable IDs, image fallback, flavorless offers and bundle components.');
+
+const sharedColaFlavors = [{ id: 'cola', group: 'cola', name: 'كولا', is_active: true }];
+assert.deepEqual(flavorData(sharedColaFlavors, 'spread', 'shared', null, null, true).flavors, ['كولا']);
+assert.equal(flavorData(sharedColaFlavors, 'spread', 'shared', null, null, true).flavorsAvailable, true);
+assert.equal(flavorData(sharedColaFlavors, 'spread', 'shared').flavorsAvailable, false);
+console.log('Flavor contract checks passed: legacy data, hidden groups, stable IDs, image fallback, flavorless offers, bundle components and shared offers.');

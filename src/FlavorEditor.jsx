@@ -1,8 +1,8 @@
 import { flavorGroups, groupLabel } from './flavorCatalog'
 import ImageUpload from './ImageUpload'
 
-export default function FlavorEditor({ site, slug, selection, flavors, onChange, onUpload, uploading }) {
-  const groups = flavorGroups(site, slug, selection)
+export default function FlavorEditor({ site, slug, selection, flavors, shared = false, onChange, onUpload, uploading }) {
+  const groups = flavorGroups(site, slug, selection, flavors, shared)
   const patch = (id, changes) => onChange(flavors.map(f => f.id === id ? { ...f, ...changes } : f))
   const move = (id, direction) => {
     const index = flavors.findIndex(f => f.id === id)

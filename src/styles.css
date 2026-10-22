@@ -344,3 +344,19 @@ input:disabled { opacity: 0.6; }
   .offer-form .modal-foot { flex-wrap: wrap; }
   .offer-form .modal-foot .btn { flex: 1; }
 }
+
+/* Shared offers across landing pages */
+.share-sites { display: grid; gap: 12px; }
+.share-site { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: color-mix(in srgb, var(--card) 88%, transparent); }
+.share-site.is-on { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.share-site-head { display: flex; align-items: center; gap: 8px; font-weight: 700; cursor: pointer; }
+.share-site-head input { width: 18px; height: 18px; }
+.share-site-head em { font-style: normal; }
+.share-site-body { display: grid; gap: 12px; margin-top: 12px; }
+.share-site-summary { margin: 0; line-height: 1.7; }
+.share-site-image { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.share-site-image-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .share-site-image { align-items: flex-start; }
+  .share-site-image-actions { width: 100%; }
+}

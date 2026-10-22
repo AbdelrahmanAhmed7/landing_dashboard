@@ -33,8 +33,16 @@ export function selectionGroups(selection) {
   return [...new Set((normalizeSelection(selection)?.items || []).filter(item => item.choose > 0).map(item => item.group))]
 }
 
-export function flavorGroups(site, slug, selection) {
+const explicitGroups = (raw) => Array.isArray(raw)
+  ? [...new Set(raw.filter(x => x && typeof x === 'object' && typeof x.group === 'string' && x.group.trim()).map(x => x.group.trim()))]
+  : []
+
+export function flavorGroups(site, slug, selection, raw, shared = false) {
   if (normalizeSelection(selection)) return selectionGroups(selection)
+  if (shared) {
+    const groups = explicitGroups(raw)
+    if (groups.length) return groups
+  }
   if (site === 'cola') return ['cola']
   if (site === 'spread') return slug === 'spread-choco-bar' ? ['spread', 'chocoBar'] : [slug === 'choco-bar' ? 'chocoBar' : 'spread']
   return [slug === 'icecream' || slug === 'ketobar' ? slug : 'default']
@@ -44,8 +52,8 @@ export function defaultFlavorsForGroup(group) {
   return (catalog[group] || []).map(([id, name, active]) => ({ id, name, group, is_active: active !== false }))
 }
 
-export function defaultFlavors(site, slug, selection) {
-  return flavorGroups(site, slug, selection).flatMap(defaultFlavorsForGroup)
+export function defaultFlavors(site, slug, selection, raw, shared = false) {
+  return flavorGroups(site, slug, selection, raw, shared).flatMap(defaultFlavorsForGroup)
 }
 
 export function groupLabel(group, selection) {
@@ -53,10 +61,10 @@ export function groupLabel(group, selection) {
   return item?.label || groupLabels[group] || group
 }
 
-export function normalizeFlavors(raw, site, slug, selection) {
+export function normalizeFlavors(raw, site, slug, selection, shared = false) {
   const sel = normalizeSelection(selection)
-  const groups = flavorGroups(site, slug, sel)
-  const defaults = defaultFlavors(site, slug, sel)
+  const groups = flavorGroups(site, slug, sel, raw, shared)
+  const defaults = defaultFlavors(site, slug, sel, raw, shared)
   // Empty legacy cola/spread arrays used to mean the local product catalog.
   // Bundles start with no flavors; the editor seeds the groups it needs.
   const source = Array.isArray(raw) && raw.length ? raw : sel ? [] : site === 'ice-cream' ? [] : defaults
@@ -67,11 +75,11 @@ export function normalizeFlavors(raw, site, slug, selection) {
   })
 }
 
-export function flavorData(raw, site, slug, local, selection) {
+export function flavorData(raw, site, slug, local, selection, shared = false) {
   const sel = normalizeSelection(selection)
-  const all = normalizeFlavors(raw, site, slug, sel)
-  const groups = flavorGroups(site, slug, sel)
-  const defaults = defaultFlavors(site, slug, sel)
+  const all = normalizeFlavors(raw, site, slug, sel, shared)
+  const groups = flavorGroups(site, slug, sel, raw, shared)
+  const defaults = defaultFlavors(site, slug, sel, raw, shared)
   const options = all.filter(f => f.is_active && f.name && groups.includes(f.group)).map(f => {
     const original = defaults.find(d => d.id === f.id && d.group === f.group)
     return { ...f, image: f.image || local?.flavorImages?.[original?.name] || local?.flavorImages?.[f.name] }

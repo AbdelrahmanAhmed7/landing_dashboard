@@ -44,7 +44,14 @@ export default function Dashboard({ session }) {
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: true })
       if (err) throw err
-      setOffers(data || [])
+      const rows = data || []
+      const sharedIds = [...new Set(rows.map(row => row.shared_id).filter(Boolean))]
+      const counts = {}
+      if (sharedIds.length) {
+        const { data: groupRows } = await supabase.from('offers').select('shared_id').in('shared_id', sharedIds)
+        for (const row of groupRows || []) counts[row.shared_id] = (counts[row.shared_id] || 0) + 1
+      }
+      setOffers(rows.map(row => ({ ...row, shared_count: counts[row.shared_id] || 1 })))
       return true
     } catch (err) {
       setError(err.message || 'تعذّر تحميل العروض. حاول مرة تانية.')
@@ -99,8 +106,8 @@ export default function Dashboard({ session }) {
   }
 
   const remove = async (o) => {
-    if (!window.confirm(`تحذف العرض "${o.name}" نهائياً؟`)) return
-    await run(() => supabase.from('offers').delete().eq('id', o.id), 'تم حذف العرض.')
+    if (!window.confirm(`تحذف العرض "${o.name}" من صفحة ${siteLabels[site] || site}؟\nلو العرض مشترك، هيفضل في الصفحات التانية.`)) return
+    await run(() => supabase.from('offers').delete().eq('id', o.id), 'تم حذف العرض من الصفحة دي.')
   }
 
   const current = SITES.find((s) => s.key === site)
@@ -196,7 +203,7 @@ export default function Dashboard({ session }) {
         <ul className="offer-list" ref={listRef} aria-busy={acting}>
           {!loading && filtered.map(o => {
             const i = offers.findIndex(item => item.id === o.id)
-            const flavors = flavorData(o.flavors, site, o.slug, null, o.selection)
+            const flavors = flavorData(o.flavors, site, o.slug, null, o.selection, Boolean(o.shared_id && o.shared_id !== o.id))
             const offerImage = o.image_url || defaultOfferImage(site, o.slug)
             return (
             <li key={o.id} data-offer-id={o.id} className={`offer-card ${o.is_active ? '' : 'inactive'}`} style={{ '--accent': o.accent }}>
@@ -221,6 +228,7 @@ export default function Dashboard({ session }) {
                 <div className="offer-meta muted small">
                   <span>{o.units_label || `${o.units} قطعة`}</span>
                   <span>{flavors.selection ? `باندل · ${flavors.selection.items.length} مكوّن` : `${flavors.flavorOptions.length} نكهة ظاهرة`}</span>
+                  {o.shared_count > 1 && <span className="pill on">مشترك في {o.shared_count} صفحات</span>}
                   <span>{shippingLabel(o, site)}</span>
                   <span dir="ltr">{o.slug}</span>
                 </div>
