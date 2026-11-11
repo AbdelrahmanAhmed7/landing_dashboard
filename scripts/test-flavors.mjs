@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { defaultFlavors, defaultFlavorsForGroup, flavorData, flavorGroups, groupLabel, normalizeFlavors, normalizeSelection } from '../src/flavorCatalog.js';
+import { defaultFlavors, defaultFlavorsForGroup, flavorData, flavorGroups, groupLabel, normalizeFlavors, normalizeSelection, spreadOfferType } from '../src/flavorCatalog.js';
 
 const legacy = flavorData([], 'cola', 'summer');
 assert.deepEqual(legacy.flavors, ['كولا', 'أناناس', 'ليمون نعناع', 'برتقال', 'تفاح أخضر', 'توت مشكل']);
@@ -13,6 +13,16 @@ assert.equal(flavorData(mixed, 'spread', 'spread-choco-bar').flavorsAvailable, t
 assert.equal(flavorData(mixed.filter(f => f.group === 'spread'), 'spread', 'spread-choco-bar').flavorsAvailable, false);
 assert.equal(flavorData(mixed.map(f => f.group === 'chocoBar' ? { ...f, is_active: false } : f), 'spread', 'spread-choco-bar').flavorsAvailable, false);
 assert.equal(flavorData([], 'spread', 'two-jars').flavorOptions.length, 5);
+
+// Custom slugs must follow the saved flavor groups, not the slug name.
+const customBarFlavors = defaultFlavorsForGroup('chocoBar');
+assert.equal(spreadOfferType('offer-custom', customBarFlavors), 'chocoBar');
+assert.deepEqual(flavorGroups('spread', 'offer-custom', null, customBarFlavors), ['chocoBar']);
+assert.deepEqual(flavorData(customBarFlavors, 'spread', 'offer-custom').flavorGroups, ['chocoBar']);
+assert.equal(flavorData(customBarFlavors, 'spread', 'offer-custom').flavorOptions.length, 6);
+assert.equal(flavorData(customBarFlavors, 'spread', 'offer-custom').flavorsAvailable, true);
+assert.equal(spreadOfferType('offer-custom', defaultFlavorsForGroup('spread')), 'spread');
+assert.equal(spreadOfferType('offer-custom', []), 'spread');
 
 assert.equal(flavorData([], 'ice-cream', 'halawa').flavorsAvailable, true);
 assert.equal(flavorData([], 'ice-cream', 'icecream').flavorsAvailable, false);

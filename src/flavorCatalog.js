@@ -37,6 +37,20 @@ const explicitGroups = (raw) => Array.isArray(raw)
   ? [...new Set(raw.filter(x => x && typeof x === 'object' && typeof x.group === 'string' && x.group.trim()).map(x => x.group.trim()))]
   : []
 
+// The spread landing has more than one product type (jars and choco bars).
+// Stored flavor groups are the source of truth, so a custom slug still renders
+// the right picker, weight and counters instead of always defaulting to jars.
+export function spreadOfferType(slug, raw) {
+  const groups = explicitGroups(raw)
+  const hasSpread = groups.includes('spread')
+  const hasChocoBar = groups.includes('chocoBar')
+  if (hasSpread && hasChocoBar) return 'mixed'
+  if (hasChocoBar) return 'chocoBar'
+  if (slug === 'spread-choco-bar') return 'mixed'
+  if (slug === 'choco-bar') return 'chocoBar'
+  return 'spread'
+}
+
 export function flavorGroups(site, slug, selection, raw, shared = false) {
   if (normalizeSelection(selection)) return selectionGroups(selection)
   if (shared) {
@@ -44,7 +58,10 @@ export function flavorGroups(site, slug, selection, raw, shared = false) {
     if (groups.length) return groups
   }
   if (site === 'cola') return ['cola']
-  if (site === 'spread') return slug === 'spread-choco-bar' ? ['spread', 'chocoBar'] : [slug === 'choco-bar' ? 'chocoBar' : 'spread']
+  if (site === 'spread') {
+    const type = spreadOfferType(slug, raw)
+    return type === 'mixed' ? ['spread', 'chocoBar'] : [type === 'chocoBar' ? 'chocoBar' : 'spread']
+  }
   return [slug === 'icecream' || slug === 'ketobar' ? slug : 'default']
 }
 
@@ -95,6 +112,7 @@ export function flavorData(raw, site, slug, local, selection, shared = false) {
   }) : null
   const required = groups.filter(group => group !== 'default' || all.some(f => f.group === group))
   return {
+    flavorGroups: groups,
     flavorOptions: options,
     flavors: options.map(f => f.name),
     flavorImages: Object.fromEntries(options.filter(f => f.image).map(f => [f.name, f.image])),

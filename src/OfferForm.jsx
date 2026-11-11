@@ -3,7 +3,7 @@ import ActualPreview from './ActualPreview'
 import FlavorEditor from './FlavorEditor'
 import BundleEditor from './BundleEditor'
 import ImageUpload from './ImageUpload'
-import { defaultFlavorsForGroup, normalizeFlavors, normalizeSelection } from './flavorCatalog'
+import { defaultFlavorsForGroup, normalizeFlavors, normalizeSelection, spreadOfferType } from './flavorCatalog'
 import { useEffect, useRef, useState } from 'react'
 import { supabase, SITES } from './supabase'
 import { uploadImage } from './imageUtils'
@@ -75,6 +75,14 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
     const selection = normalizeSelection(initial.selection)
     return { ...initial, selection, shipping_mode: mode, free_shipping: mode === 'free', shipping_fee: fee ?? '', flavors: normalizeFlavors(initial.flavors, site, initial.slug, selection, initialShared) }
   })
+  // Spread page offers can be jars or choco bars. The type lives in the saved
+  // flavor groups, so custom slugs still get the right picker and counters.
+  const [spreadType, setSpreadType] = useState(() => {
+    if (site !== 'spread') return null
+    if (!offer) return 'spread'
+    if (normalizeSelection(offer.selection)) return null
+    return spreadOfferType(offer.slug, offer.flavors)
+  })
   const [offerPreview, setOfferPreview] = useState(null)
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState('') // '' | 'main' | stable flavor ID | 'site:<key>'
@@ -92,6 +100,11 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
   const selectedSites = [site, ...Object.entries(extraSites).filter(([, value]) => value.enabled).map(([key]) => key)]
   const bundleUnits = isBundle ? f.selection.items.reduce((sum, item) => sum + Number(item.qty), 0) : 0
   const bundleGroups = isBundle ? [...new Set(f.selection.items.filter(item => item.choose > 0).map(item => item.group))] : []
+  const offeredFlavorGroups = isBundle
+    ? bundleGroups
+    : site === 'spread' && !isShared && spreadType
+      ? spreadType === 'mixed' ? ['spread', 'chocoBar'] : [spreadType]
+      : null
 
   useEffect(() => {
     const previousFocus = document.activeElement
@@ -235,6 +248,19 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
     return { ...p, selection: p.selection || { version: 1, mode: 'components', items: [{ key: 'item-1', label: 'المكوّن 1', qty: units, choose: 0, group: null }] } }
   })
 
+  const changeSpreadType = (next) => {
+    if (next === spreadType) return
+    const seeds = next === 'mixed'
+      ? [...defaultFlavorsForGroup('spread'), ...defaultFlavorsForGroup('chocoBar')]
+      : defaultFlavorsForGroup(next)
+    const untouchedDefaults = f.flavors.length > 0 && f.flavors.every(fl =>
+      defaultFlavorsForGroup(fl.group).some(d => d.id === fl.id && d.name === fl.name) && !fl.image
+    )
+    if (!untouchedDefaults && f.flavors.length && !window.confirm('تغيير نوع العرض هيستبدل النكهات الحالية بالنكهات الافتراضية للنوع الجديد. تكمل؟')) return
+    setSpreadType(next)
+    setF(prev => ({ ...prev, flavors: seeds }))
+  }
+
   const changeBundleGroup = (key, group) => setF((p) => {
     const current = p.selection.items.find(item => item.key === key)
     const items = p.selection.items.map(item => item.key === key ? { ...item, group } : item)
@@ -294,7 +320,7 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
       if (data.shipping_mode === 'fixed' && data.shipping_fee === '') return `اكتب مبلغ شحن صفحة ${siteName(key)} أو اختار يتحدد مع الكول سنتر`
       if (data.shipping_mode === 'fixed' && (!Number.isFinite(Number(data.shipping_fee)) || Number(data.shipping_fee) < 0 || Number(data.shipping_fee) > 99999999.99)) return `مبلغ شحن صفحة ${siteName(key)} لازم يكون رقم من صفر إلى 99999999.99`
     }
-    const usedFlavors = isBundle ? f.flavors.filter(x => bundleGroups.includes(x.group)) : f.flavors
+    const usedFlavors = offeredFlavorGroups ? f.flavors.filter(x => offeredFlavorGroups.includes(x.group)) : f.flavors
     if (usedFlavors.some((x) => !x.name.trim())) return 'في نكهة اسمها فاضي — اكتب اسمها أو امسحها'
     const keys = usedFlavors.map(x => `${x.group}:${x.name.trim()}`)
     if (new Set(keys).size !== keys.length) return 'اسم النكهة متكرر داخل نفس المجموعة'
@@ -322,7 +348,7 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
           ...(choose > 0 ? { group } : {}),
         })),
       } : null,
-      flavors: f.flavors.filter(x => !isBundle || bundleGroups.includes(x.group)).map((x) => ({
+      flavors: f.flavors.filter(x => !offeredFlavorGroups || offeredFlavorGroups.includes(x.group)).map((x) => ({
         id: x.id,
         group: x.group,
         is_active: x.is_active,
@@ -487,6 +513,18 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
               <small className="muted">{isBundle ? 'مناسب لما الباندل فيه أكتر من منتج، وكل منتج له اختيار أو كمية مختلفة.' : 'الوضع الحالي: العميل بيوزّع عدد القطع على نكهات العرض.'}</small>
             </label>
 
+            {site === 'spread' && !isBundle && !isShared && (
+              <label className="field">
+                <span>نوع العرض</span>
+                <select value={spreadType || 'spread'} disabled={locked} onChange={e => changeSpreadType(e.target.value)}>
+                  <option value="spread">برطمانات سبريد</option>
+                  <option value="chocoBar">شيكولاتة بار</option>
+                  {spreadType === 'mixed' && <option value="mixed">سبريد + شيكولاتة بار</option>}
+                </select>
+                <small className="muted">بيحدد نكهات العرض والوزن وطريقة العدّ في صفحة {siteName(site)}. اختار «شيكولاتة بار» لأي عرض بار مهما كان الـ slug.</small>
+              </label>
+            )}
+
             <div className="grid2">
               <label className="field">
                 <span>عدد القطع في العرض *</span>
@@ -617,7 +655,7 @@ export default function OfferForm({ site, offer, offers = [], nextOrder, onClose
 
             <label className="field">
               <span>الـ slug (معرّف ثابت بالإنجليزي) *</span>
-              <input dir="ltr" value={f.slug} onChange={(e) => { const slug = e.target.value.toLowerCase(); setF(p => ({ ...p, slug, flavors: isShared ? p.flavors : normalizeFlavors(p.flavors.map(({ group, ...fl }) => fl), site, slug, p.selection, false) })) }} disabled={isEdit} />
+              <input dir="ltr" value={f.slug} onChange={(e) => { const slug = e.target.value.toLowerCase(); setF(p => ({ ...p, slug, flavors: isShared || (site === 'spread' && spreadType) ? p.flavors : normalizeFlavors(p.flavors.map(({ group, ...fl }) => fl), site, slug, p.selection, false) })) }} disabled={isEdit} />
               <small className="muted">
                 {isEdit
                   ? 'مش بيتغيّر بعد الإنشاء، لأن كود الـ landing بيعتمد عليه.'
